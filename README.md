@@ -95,6 +95,18 @@ curl -s -X POST https://mcp.turingcorp.net/mcp \
   --data '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"decide","arguments":{"task":"Pick a launch date","option_a":"Ship now","option_b":"Wait two weeks"},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}'
 ```
 
+### Versions
+
+Two version numbers exist and they are **not** meant to match:
+
+| | meaning |
+|---|---|
+| **Registry `version`** (`server.json`) | the **listing** version - the metadata record (endpoint, auth declaration, icon, links). Advances when the listing changes. |
+| **`serverInfo.version`** (from the live endpoint) | the **runtime** version of the deployed server. Advances when behavior changes. |
+
+A listing-only change (for example a corrected link) advances the registry version without
+touching the runtime, so the two can legitimately differ.
+
 ### Protocol details worth knowing
 
 - **`Accept` must contain both** `application/json` **and** `text/event-stream`, or you get 406.
