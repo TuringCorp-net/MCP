@@ -1,0 +1,41 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "net.turingcorp.mcp/decider",
+  "title": "TuringCorp Decider",
+  "description": "A judge for agent decisions: give it two defensible options, get the better one back.",
+  "version": "1.0.0",
+  "websiteUrl": "https://api.turingcorp.net",
+  "icons": [
+    {
+      "src": "https://mcp.turingcorp.net/icon.jpg",
+      "mimeType": "image/jpeg",
+      "sizes": ["1024x1024"]
+    }
+  ],
+  "repository": {
+    "url": "https://github.com/TuringCorp-net/MCP",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.turingcorp.net/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer <Agent Pass>. Obtain a pass at https://agent-pass.turingcorp.net (self-service signup, email verification, then top up). A pass is valid for 7 days and can be re-rolled.",
+          "value": "Bearer {agent_pass}",
+          "isRequired": true,
+          "isSecret": true,
+          "variables": {
+            "agent_pass": {
+              "description": "Your TuringCorp Agent Pass. Sign up and top up at https://agent-pass.turingcorp.net; if a call is refused as an invalid credential, sign in there again and re-roll the pass.",
+              "isRequired": true,
+              "isSecret": true
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

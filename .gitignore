@@ -1,0 +1,13 @@
+# 凭据永不入库
+.env
+*.env
+.dev.vars
+*.pem
+*.key
+
+# 运行态
+ops/state/
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
