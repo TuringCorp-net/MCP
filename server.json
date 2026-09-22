@@ -3,7 +3,7 @@
   "name": "net.turingcorp.mcp/decider",
   "title": "TuringCorp Decider",
   "description": "A judge for agent decisions: give it two defensible options, get the better one back.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "websiteUrl": "https://mcp.turingcorp.net/",
   "icons": [
     {
