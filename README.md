@@ -38,13 +38,40 @@ Entry rate limit: **120 requests / 60 s / client IP**. This is flood damping, no
 
 ## Quickstart
 
-**Claude Code / Cursor / any `mcp-remote`-based client:**
+You need an **Agent Pass** to call the tool. Discovery (`tools/list`) works without one — calling `decide` does not.
 
-```bash
-npx -y mcp-remote@latest https://mcp.turingcorp.net/mcp
+### 1. Get an Agent Pass
+
+Self-service at **<https://agent-pass.turingcorp.net>**: sign up with an email address, verify it, add credit. The pass is shown once; it is valid for **7 days** and can be re-rolled at any time. Agents can do the same thing over the API — see that site's `/llms.txt`.
+
+### 2. Point your client at the endpoint
+
+**Claude Desktop / Cursor / any client that reads a JSON config:**
+
+```json
+{
+  "mcpServers": {
+    "decider": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote@latest", "https://mcp.turingcorp.net/mcp"],
+      "env": { "AUTHORIZATION": "Bearer <your Agent Pass>" }
+    }
+  }
+}
 ```
 
-**Raw discovery call (no credentials needed):**
+> ⚠️ A bare `npx -y mcp-remote@latest https://mcp.turingcorp.net/mcp` with no credential **will connect and list tools, then fail on the first call** with 401. That is expected — discovery is open, execution is not.
+
+**Claude Code:**
+
+```bash
+claude mcp add --transport http decider https://mcp.turingcorp.net/mcp \
+  --header "Authorization: Bearer <your Agent Pass>"
+```
+
+### 3. Sanity-check it yourself
+
+**Discovery — no credentials needed:**
 
 ```bash
 curl -s -X POST https://mcp.turingcorp.net/mcp \
@@ -55,7 +82,32 @@ curl -s -X POST https://mcp.turingcorp.net/mcp \
   --data '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}'
 ```
 
-`Accept` must contain **both** `application/json` and `text/event-stream`, or you get 406.
+**Calling the tool** additionally needs `mcp-name: decide` and the credential:
+
+```bash
+curl -s -X POST https://mcp.turingcorp.net/mcp \
+  -H 'content-type: application/json' \
+  -H 'accept: application/json, text/event-stream' \
+  -H 'mcp-protocol-version: 2026-07-28' \
+  -H 'mcp-method: tools/call' \
+  -H 'mcp-name: decide' \
+  -H "authorization: Bearer $AGENT_PASS" \
+  --data '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"decide","arguments":{"task":"Pick a launch date","option_a":"Ship now","option_b":"Wait two weeks"},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}'
+```
+
+### Protocol details worth knowing
+
+- **`Accept` must contain both** `application/json` **and** `text/event-stream`, or you get 406.
+- **Protocol versions:** one route serves both generations.
+  - **Modern `2026-07-28`** — no `initialize` handshake; use `server/discover` and `_meta`.
+  - **Legacy** — standard `initialize` handshake. Measured negotiation: a client asking for `2025-11-25`, `2025-06-18`, or `2025-03-26` is answered with **exactly the version it asked for**; a modern `2026-07-28` `initialize` (which is not part of that generation) is answered with `2025-11-25`.
+  - Server capability discovery via `tools/list` and `server/discover` needs no credentials.
+- **Errors are machine-readable.** When a call fails, the tool result carries a prose block **and** a second block containing a single JSON object, e.g. `{"error":"invalid_credential","http_status":"401","action_url":"…"}`. **Branch on `error`, not on the message.**
+- **Authorization discovery:** `401` responses carry a `resource_metadata` pointing at `/.well-known/oauth-protected-resource`. Note that this server uses a **static bearer credential, not OAuth** — that document says so explicitly rather than sending you into an OAuth flow that does not exist.
+
+## Not for browser clients
+
+This endpoint deliberately does **not** serve browser-based (cross-origin) MCP clients: requests carrying a browser `Origin` header other than localhost are rejected with 403, and no CORS headers are returned. Browser tooling such as the MCP Inspector works by proxying through a **local** process, which sends no `Origin` — that path works normally. If you need a browser page to reach this server, run a proxy you control rather than calling it cross-origin.
 
 ## What this is not
 
