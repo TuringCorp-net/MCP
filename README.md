@@ -16,6 +16,7 @@ A **judge for agent decisions**. Your agent has two defensible options and has t
 | **In** | `task` (string), `option_a` (string), `option_b` (string) — all required |
 | **Out** | `better_option` (`"A"` \| `"B"`), `confidence` (percentage string, e.g. `"83.3%"`), `reason` (string) |
 | **Annotations** | `readOnlyHint: true` · `openWorldHint: false` · `idempotentHint: false` |
+| **Latency** | Expect 60-90 seconds per call: set your client timeout to at least 180 seconds (300 recommended). A 60-second default cuts the call off before the answer arrives. |
 
 `confidence` is **this service's own judgement of how far apart the two options were** — a reference for your decision-making, not an instruction, not a result, and not a prediction of how the choice turns out. As a rough reading: ≥90% clearly apart · 80–90% apart, less clearly · 70–80% a closer call · <70% close to evenly matched. These ranges are descriptive only. **Choose your own threshold for your own use case; for high-stakes or irreversible decisions apply your own review policy.** Observed accuracy for each range, and how it was measured, is published at <https://api.turingcorp.net> — that page is the authority on the bands and their measured accuracy.
 
@@ -35,12 +36,16 @@ Send an **Agent Pass**: `Authorization: Bearer <pass>`.
 
 Issued at **<https://agent-pass.turingcorp.net>** — self-service signup (email verification) → top up → get a pass. A pass is valid for **7 days** and can be re-rolled. If a call is refused as an invalid credential, sign in there again and re-roll.
 
-| Situation | Response |
-|---|---|
-| No credential | `401` + `WWW-Authenticate: Bearer realm="turingcorp-mcp"` |
-| Expired / invalid pass | `invalid_credential`, with a re-login URL in the message |
-| Insufficient balance | `402` + `action_url` pointing at top-up |
-| Over quota | `429` + `Retry-After` |
+Errors fall into **two classes**, and they arrive in different places:
+
+> Credential problems are rejected before the call (HTTP 401 + `WWW-Authenticate`). Business failures come back as a tool result with `isError: true` plus a JSON block `{error, http_status, action_url, message}` — `http_status` is the upstream status; the tool call itself is HTTP 200.
+
+| Class | What comes back | Examples |
+|---|---|---|
+| **Credential** | HTTP `401` + `WWW-Authenticate` — no tool result is produced | no credential · expired or invalid pass (`invalid_credential`, with a re-login URL in the message) |
+| **Business** | HTTP `200`, tool result `isError: true`, plus a JSON block | insufficient balance (`http_status` `402`, `action_url` pointing at top-up) · over quota (`http_status` `429`) |
+
+Branch on the **HTTP status first**: a `401` will not succeed on retry without a new credential, whereas a business failure was a call that ran and was declined — read the block for the reason and the next step. The detailed contract is under *Errors are machine-readable* below.
 
 Entry rate limit: **120 requests / 60 s / client IP**. This is flood damping, not a quota — the real per-key quota is enforced separately. The counter is approximate: it is maintained per edge location and is eventually consistent, so a brief overshoot is possible.
 
