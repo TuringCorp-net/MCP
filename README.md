@@ -142,6 +142,8 @@ This repository carries the **discovery metadata** for the server above — what
 - [`server.json`](server.json) — the official MCP Registry manifest
 - [`docs/DIRECTORIES.md`](docs/DIRECTORIES.md) — where this server is listed, and what each directory requires
 
+This server is also listed on Smithery: **<https://smithery.ai/servers/turingcorp/decider>**
+
 The server itself is a hosted remote endpoint; nothing here needs to be installed or run.
 
 ## License
