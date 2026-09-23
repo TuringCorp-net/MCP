@@ -17,7 +17,7 @@ A **judge for agent decisions**. Your agent has two defensible options and has t
 | **Out** | `better_option` (`"A"` \| `"B"`), `confidence` (percentage string, e.g. `"83.3%"`), `reason` (string) |
 | **Annotations** | `readOnlyHint: true` · `openWorldHint: false` · `idempotentHint: false` |
 
-`confidence` is **this service's own judgement of how far apart the two options were** — a reference for your decision-making, not an instruction, not a result, and not a prediction of how the choice turns out. As a rough reading: ≥90% clearly apart · 80–89% apart, less clearly · 70–79% a closer call · <70% close to evenly matched. These ranges are descriptive only. **Choose your own threshold for your own use case; for high-stakes or irreversible decisions apply your own review policy.** Observed accuracy by range, and how it was measured, is published at <https://api.turingcorp.net>.
+`confidence` is **this service's own judgement of how far apart the two options were** — a reference for your decision-making, not an instruction, not a result, and not a prediction of how the choice turns out. As a rough reading: ≥90% clearly apart · 80–90% apart, less clearly · 70–80% a closer call · <70% close to evenly matched. These ranges are descriptive only. **Choose your own threshold for your own use case; for high-stakes or irreversible decisions apply your own review policy.** Observed accuracy for each range, and how it was measured, is published at <https://api.turingcorp.net> — that page is the authority on the bands and their measured accuracy.
 
 ⚠️ `idempotentHint: false` is an honest declaration: there is currently no idempotency key, so a client that times out and retries **may be charged twice**.
 
@@ -114,7 +114,14 @@ touching the runtime, so the two can legitimately differ.
   - **Modern `2026-07-28`** — no `initialize` handshake; use `server/discover` and `_meta`.
   - **Legacy** — standard `initialize` handshake. Measured negotiation: a client asking for `2025-11-25`, `2025-06-18`, or `2025-03-26` is answered with **exactly the version it asked for**; a modern `2026-07-28` `initialize` (which is not part of that generation) is answered with `2025-11-25`.
   - Server capability discovery via `tools/list` and `server/discover` needs no credentials.
-- **Errors are machine-readable.** When a call fails, the tool result carries a prose block **and** a second block containing a single JSON object, e.g. `{"error":"invalid_credential","http_status":"401","action_url":"…"}`. **Branch on `error`, not on the message.**
+- **Errors are machine-readable.** There are two distinct kinds, and they arrive differently — so branch on the right thing:
+
+| What failed | How you see it | What to branch on |
+|---|---|---|
+| **Credential** missing or invalid | **HTTP `401`** with a `WWW-Authenticate` challenge (carrying `error="invalid_token"` and `resource_metadata`); the body is a standard JSON-RPC error with `error.code = -32001`. No tool result is produced. | the **HTTP status code** |
+| **Business** failure — insufficient balance, quota, upstream error | a normal tool result (`isError: true`) whose **second `content` block** is a single JSON object you can `JSON.parse`, e.g. `{"error":"insufficient_balance","http_status":"402","action_url":"…","message":"…"}` | the **`error` field** inside that block |
+
+  In short: credential problems are rejected before the tool runs, so they never appear as a tool result; everything else that fails after that does, with a machine-readable block attached.
 - **Authorization discovery:** `401` responses carry a `resource_metadata` pointing at `/.well-known/oauth-protected-resource`. Note that this server uses a **static bearer credential, not OAuth** — that document says so explicitly rather than sending you into an OAuth flow that does not exist.
 
 ## Not for browser clients
