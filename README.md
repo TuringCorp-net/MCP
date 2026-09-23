@@ -74,7 +74,7 @@ Self-service at **<https://agent-pass.turingcorp.net>**: sign up with an email a
 ```json
 {
   "mcpServers": {
-    "decider": {
+    "TuringCorp": {
       "command": "npx",
       "args": ["-y", "mcp-remote@latest", "https://mcp.turingcorp.net/mcp"],
       "env": { "AUTHORIZATION": "Bearer <your Agent Pass>" }
@@ -88,7 +88,7 @@ Self-service at **<https://agent-pass.turingcorp.net>**: sign up with an email a
 **Claude Code:**
 
 ```bash
-claude mcp add --transport http decider https://mcp.turingcorp.net/mcp \
+claude mcp add --transport http TuringCorp https://mcp.turingcorp.net/mcp \
   --header "Authorization: Bearer <your Agent Pass>"
 ```
 
