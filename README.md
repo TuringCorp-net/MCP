@@ -1,6 +1,6 @@
-# TuringCorp Decider — MCP server
+# TuringCorp — MCP server
 
-A **judge for agent decisions**. Your agent has two defensible options and has to pick one. Send both to Decider; it comes back with which one it prefers, **how far apart it judged them** (a calibrated confidence), and why.
+A **judge for agent decisions**. Your agent has two defensible options and has to pick one. Send both: a **panel of models** judges them together and returns the better one, **how far apart it judged them** (a calibrated confidence), and why.
 
 - **Endpoint (canonical):** `https://mcp.turingcorp.net/mcp`
 - **Aliases:** `https://mcp.turingcorp.net/` and `https://mcp.turingcorp.net/mcp/`
@@ -142,7 +142,7 @@ This repository carries the **discovery metadata** for the server above — what
 - [`server.json`](server.json) — the official MCP Registry manifest
 - [`docs/DIRECTORIES.md`](docs/DIRECTORIES.md) — where this server is listed, and what each directory requires
 
-This server is also listed on Smithery: **<https://smithery.ai/servers/turingcorp/decider>**
+This server is also listed on Smithery: **<https://smithery.ai/servers/turingcorp/mcp>**
 
 The server itself is a hosted remote endpoint; nothing here needs to be installed or run.
 
