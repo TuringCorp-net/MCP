@@ -21,6 +21,14 @@ A **judge for agent decisions**. Your agent has two defensible options and has t
 
 ⚠️ `idempotentHint: false` is an honest declaration: there is currently no idempotency key, so a client that times out and retries **may be charged twice**.
 
+## See it decide first
+
+There is no free tier, so we publish the evidence instead: **27 real decisions, recorded verbatim** — the question, both options, which one was preferred, the confidence reported, and the reason. Nine domains, three cases each: Writing · Tech · Business · Research · Career · Money · People · Travel · Everyday.
+
+→ **<https://github.com/TuringCorp-net/poe-demo-public>** — dataset: [`examples.json`](https://github.com/TuringCorp-net/poe-demo-public/blob/main/examples.json)
+
+Read the confidence column first. On ordinary, closely matched questions it reports **70–90%, not 99%** — and that is the point of a calibrated number rather than a decorative one: a high value means the comparison was decisive and the pick can be acted on, a low value means the two options really are close and the choice stays yours. In this set the range is **27.3%–88.3%, median 74.0%, none above 90%**, because these are everyday close calls, not easy ones. What the bands deliver when they *are* decisive is published at <https://api.turingcorp.net>.
+
 ## Authentication
 
 Send an **Agent Pass**: `Authorization: Bearer <pass>`.
