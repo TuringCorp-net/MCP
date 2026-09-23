@@ -14,13 +14,23 @@ A **judge for agent decisions**. Your agent has two defensible options and has t
 | | |
 |---|---|
 | **In** | `task` (string), `option_a` (string), `option_b` (string) — all required |
-| **Out** | `better_option` (`"A"` \| `"B"`), `confidence` (percentage string, e.g. `"83.3%"`), `reason` (string) |
+| **Out** | `job_id` (string), `better_option` (`"A"` \| `"B"`), `confidence` (percentage string, e.g. `"83.3%"`), `reason` (string) |
 | **Annotations** | `readOnlyHint: true` · `openWorldHint: false` · `idempotentHint: false` |
 | **Latency** | Expect 60-90 seconds per call: set your client timeout to at least 180 seconds (300 recommended). A 60-second default cuts the call off before the answer arrives. |
+| **Long calls** | A client that declares the `io.modelcontextprotocol/tasks` extension gets a task handle back instead of waiting 60-90 seconds, and polls `tasks/get` — see [Retrieving a result](#retrieving-a-result). Clients that do not declare it see no change at all. |
 
 `confidence` is **this service's own judgement of how far apart the two options were** — a reference for your decision-making, not an instruction, not a result, and not a prediction of how the choice turns out. As a rough reading: ≥90% clearly apart · 80–90% apart, less clearly · 70–80% a closer call · <70% close to evenly matched. These ranges are descriptive only. **Choose your own threshold for your own use case; for high-stakes or irreversible decisions apply your own review policy.** Observed accuracy for each range, and how it was measured, is published at <https://api.turingcorp.net> — that page is the authority on the bands and their measured accuracy.
 
-⚠️ `idempotentHint: false` is an honest declaration: there is currently no idempotency key, so a client that times out and retries **may be charged twice**.
+⚠️ `idempotentHint: false` is an honest declaration: a retried call is a new call. **Record the `job_id` the result returns** — a decision you have already paid for can be collected for **7 days** with the same credential (`GET https://api.turingcorp.net/v1/jobs?job_id=<id>`; without the id, `GET https://api.turingcorp.net/v1/jobs` lists the job ids for that credential). Retrieve instead of retrying.
+
+## Retrieving a result
+
+Every call returns a `job_id`. If the call times out or the connection drops, **do not call again** — retrieve it:
+
+- **With the id** — `GET https://api.turingcorp.net/v1/jobs?job_id=<id>` with the same Agent Pass. A client that speaks the `io.modelcontextprotocol/tasks` extension can use `tasks/get` with `{"taskId":"<id>"}` on the MCP endpoint instead.
+- **Without it** — `GET https://api.turingcorp.net/v1/jobs` lists the job ids that credential created in the last 7 days; then fetch one as above.
+
+Retrieval returns the job's status and, once it succeeded, the same body the call itself would have returned. A job that is not yours, or older than **7 days**, is reported as unavailable. `GET https://api.turingcorp.net/v1/account` returns `{"account_id":"…"}`.
 
 ## See it decide first
 
@@ -146,7 +156,7 @@ This endpoint deliberately does **not** serve browser-based (cross-origin) MCP c
 - **One tool only.** `decide` is the entire surface. There is no way to reach other tiers through this endpoint.
 - **No SLA.** No availability commitment is offered, and none should be inferred.
 - **Not an autopilot.** Decider is a component you call. How you gate on it — thresholds, human review, retries — is your policy and stays yours.
-- **No idempotency** (see above).
+- **No idempotency key — record the job id instead.** A retried call is a new call; collect the result with the `job_id` instead.
 
 ## About this repository
 
