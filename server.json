@@ -1,9 +1,9 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "net.turingcorp.mcp/decider",
-  "title": "TuringCorp Decider",
-  "description": "A judge for agent decisions: give it two defensible options, get the better one back.",
-  "version": "1.0.1",
+  "title": "TuringCorp",
+  "description": "The TuringCorp MCP server. Its decide tool judges which of two defensible options is better.",
+  "version": "1.0.2",
   "websiteUrl": "https://mcp.turingcorp.net/",
   "icons": [
     {
