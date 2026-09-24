@@ -14,21 +14,48 @@ A **judge for agent decisions**. Your agent has two defensible options and has t
 | | |
 |---|---|
 | **In** | `task` (string), `option_a` (string), `option_b` (string) — all required |
-| **Out** | `job_id` (string), `better_option` (`"A"` \| `"B"`), `confidence` (percentage string, e.g. `"83.3%"`), `reason` (string) |
+| **Out** | `job_id` (string), `better_option` (`"A"` \| `"B"`), `confidence` (percentage string, e.g. `"76.7%"`), `reason` (string) |
 | **Annotations** | `readOnlyHint: true` · `openWorldHint: false` · `idempotentHint: false` |
-| **Latency** | Expect 60-90 seconds per call: set your client timeout to at least 180 seconds (300 recommended). A 60-second default cuts the call off before the answer arrives. |
-| **Long calls** | A client that declares the `io.modelcontextprotocol/tasks` extension gets a task handle back instead of waiting 60-90 seconds, and polls `tasks/get` — see [Retrieving a result](#retrieving-a-result). Clients that do not declare it see no change at all. |
+| **Timeout** | Reserve **180–300 seconds** — a decision is a long call. The timeout is a **client/host setting, not a tool parameter**: there is nothing to pass in the call. A 60s default cuts it off before the answer arrives; if that happens, do not call again — retrieve by `job_id`. |
+| **Long calls** | A client that declares the `io.modelcontextprotocol/tasks` extension gets a task handle back instead of holding one connection open for minutes, and polls `tasks/get` — see [Retrieving a result](#retrieving-a-result). Clients that do not declare it see no change at all. |
+
+**A successful call returns the decision inline.** `job_id`, `better_option`, `confidence` and `reason` all arrive
+in the *same* tool result — there is nothing to poll and nothing to fetch afterwards. The `job_id` is only for the
+case where the call never came back (timeout, dropped connection, client gave up waiting).
 
 `confidence` is **this service's own judgement of how far apart the two options were** — a reference for your decision-making, not an instruction, not a result, and not a prediction of how the choice turns out. As a rough reading: ≥90% clearly apart · 80–90% apart, less clearly · 70–80% a closer call · <70% close to evenly matched. These ranges are descriptive only. **Choose your own threshold for your own use case; for high-stakes or irreversible decisions apply your own review policy.** Observed accuracy for each range, and how it was measured, is published at <https://api.turingcorp.net> — that page is the authority on the bands and their measured accuracy.
 
 ⚠️ `idempotentHint: false` is an honest declaration: a retried call is a new call. **Record the `job_id` the result returns** — a decision you have already paid for can be collected for **7 days** with the same credential (`GET https://api.turingcorp.net/v1/jobs?job_id=<id>`; without the id, `GET https://api.turingcorp.net/v1/jobs` lists the job ids for that credential). Retrieve instead of retrying.
+
+## When not to use it
+
+- **More than two options.** It compares exactly A and B — there is no third slot, and it will not rank a list.
+- **Anything you can compute or verify.** A spec, a test, a price, a document: if something objective decides it, use that. This is for choices where no objective rule does.
+- **Factual questions.** It picks between two candidates; it does not look anything up.
+- **Speed-critical paths.** A decision is a long call and a paid one. Do not put it behind a request that has to answer in seconds.
+- **High-stakes irreversible calls without review.** Route on the confidence and keep your own review policy.
+
+## How to fill the three arguments
+
+- `task` — state the decision **neutrally**, without leaning toward either side: *"Which email do I send?"*, not *"Should I send the honest one?"*
+- `option_a` / `option_b` — one **concrete** option each, plus the case for it. Plain text or Markdown, any length; keep the two sides roughly comparable so the comparison is fair.
+- **One option = one plan.** Do not bundle alternatives into a single side ("go indoors *or* postpone"): it compares the two slots, it does not split one of them for you.
+
+```json
+{
+  "task": "Which version of the delivery-slip email do I send to a client we want to keep?",
+  "option_a": "Short and direct: the integration took longer than planned, delivery moves to the 24th, everything else is unchanged.",
+  "option_b": "Warmer and longer: thank them for the kickoff, explain that dependencies took more time, offer to walk through the details."
+}
+```
 
 ## Retrieving a result
 
 Every call returns a `job_id`. If the call times out or the connection drops, **do not call again** — retrieve it:
 
 - **With the id** — `GET https://api.turingcorp.net/v1/jobs?job_id=<id>` with the same Agent Pass. A client that speaks the `io.modelcontextprotocol/tasks` extension can use `tasks/get` with `{"taskId":"<id>"}` on the MCP endpoint instead.
-- **Without it** — `GET https://api.turingcorp.net/v1/jobs` lists the job ids that credential created in the last 7 days; then fetch one as above.
+- **Without it** — `GET https://api.turingcorp.net/v1/jobs` lists the job ids that credential created in the last 7 days; then fetch one as above. The list carries only the job id, the product and a timestamp — fetch a job by id to see what it was.
+- **Nothing yet** — an empty list is **not** an error, and there is **no** `job_id=0` placeholder: `{"object":"list","window_seconds":604800,"data":[]}`. Asking for `0` returns `404 No such job.`
 
 Retrieval returns the job's status and, once it succeeded, the same body the call itself would have returned. A job that is not yours, or older than **7 days**, is reported as unavailable. `GET https://api.turingcorp.net/v1/account` returns `{"account_id":"…"}`.
 
@@ -59,9 +86,24 @@ Branch on the **HTTP status first**: a `401` will not succeed on retry without a
 
 Entry rate limit: **120 requests / 60 s / client IP**. This is flood damping, not a quota — the real per-key quota is enforced separately. The counter is approximate: it is maintained per edge location and is eventually consistent, so a brief overshoot is possible.
 
+## Two ways in — and they are not the same
+
+- **Through an MCP client or host** (Claude Code, Cursor, VS Code, Codex, TRAE, Coze…). The host holds the credential and attaches it for you: **you do not set an `Authorization` header yourself, and in most hosts you cannot**. The timeout is a host setting, not something you pass in the call.
+- **Directly against the REST API** (<https://api.turingcorp.net>). Here you *do* send `Authorization: Bearer <Agent Pass>` yourself, and you can retrieve a job by id.
+
+⚠️ The part that catches people out: **being able to call the tool through a host does not mean you can reach the
+REST API.** The host may never hand you the underlying Agent Pass, so a job-retrieval call you make on your own can
+come back `401`. If your host declares the Tasks extension, retrieve through the tool surface instead (see
+[Retrieving a result](#retrieving-a-result)); if it does not, retrieval may simply not be reachable from where you are.
+
 ## Quickstart
 
 You need an **Agent Pass** to call the tool. Discovery (`tools/list`) works without one — calling `decide` does not.
+
+🔑 **Where the pass lives matters.** If your client can keep it out of the file, do that — VS Code's
+`${input:…}`, Codex's `bearer_token_env_var`. A pass written in plain text inside `mcp.json` or any client config
+is readable by **every agent and process that can read that file**, and assistants do read their own config — one
+can print your pass straight into its output. Treat a client config as public within your machine.
 
 ### 1. Get an Agent Pass
 
@@ -69,15 +111,36 @@ Self-service at **<https://agent-pass.turingcorp.net>**: sign up with an email a
 
 ### 2. Point your client at the endpoint
 
-**Claude Desktop / Cursor / any client that reads a JSON config:**
+**Any client that reads a JSON config — Cursor, Cline, Windsurf, Claude Desktop:**
+
+```json
+{
+  "mcpServers": {
+    "TuringCorp": {
+      "type": "http",
+      "url": "https://mcp.turingcorp.net/mcp",
+      "headers": { "Authorization": "Bearer <your Agent Pass>" }
+    }
+  }
+}
+```
+
+Keep the `"type": "http"` line: a client that reads a `url` entry with no `type` treats it as a local stdio
+server and skips it.
+
+**A client that only speaks stdio** needs a bridge, and the credential must go in through `--header` —
+`mcp-remote` does not read an `AUTHORIZATION` environment variable, so a config that only sets one connects,
+lists tools, and then fails on the first call with 401. The missing space after `Authorization:` is deliberate:
+some clients mangle spaces inside `args`.
 
 ```json
 {
   "mcpServers": {
     "TuringCorp": {
       "command": "npx",
-      "args": ["-y", "mcp-remote@latest", "https://mcp.turingcorp.net/mcp"],
-      "env": { "AUTHORIZATION": "Bearer <your Agent Pass>" }
+      "args": ["-y", "mcp-remote", "https://mcp.turingcorp.net/mcp",
+               "--header", "Authorization:${AGENT_PASS}"],
+      "env": { "AGENT_PASS": "Bearer <your Agent Pass>" }
     }
   }
 }
