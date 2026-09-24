@@ -13,13 +13,13 @@ A **judge for agent decisions**. Your agent has two defensible options and has t
 
 | | |
 |---|---|
-| **In** | `task` (string), `option_a` (string), `option_b` (string) — all required |
-| **Out** | `job_id` (string), `better_option` (`"A"` \| `"B"`), `confidence` (percentage string, e.g. `"76.7%"`), `reason` (string) |
+| **In** | `task` (string), `optionA` (string), `optionB` (string) — all required |
+| **Out** | `job_id` (string), `betterOption` (`"A"` \| `"B"`), `confidence` (percentage string, e.g. `"76.7%"`), `reason` (string) |
 | **Annotations** | `readOnlyHint: true` · `openWorldHint: false` · `idempotentHint: false` |
 | **Timeout** | Reserve **180–300 seconds** — a decision is a long call. The timeout is a **client/host setting, not a tool parameter**: there is nothing to pass in the call. A 60s default cuts it off before the answer arrives; if that happens, do not call again — retrieve by `job_id`. |
 | **Long calls** | A client that declares the `io.modelcontextprotocol/tasks` extension gets a task handle back instead of holding one connection open for minutes, and polls `tasks/get` — see [Retrieving a result](#retrieving-a-result). Clients that do not declare it see no change at all. |
 
-**A successful call returns the decision inline.** `job_id`, `better_option`, `confidence` and `reason` all arrive
+**A successful call returns the decision inline.** `job_id`, `betterOption`, `confidence` and `reason` all arrive
 in the *same* tool result — there is nothing to poll and nothing to fetch afterwards. The `job_id` is only for the
 case where the call never came back (timeout, dropped connection, client gave up waiting).
 
@@ -38,14 +38,14 @@ case where the call never came back (timeout, dropped connection, client gave up
 ## How to fill the three arguments
 
 - `task` — state the decision **neutrally**, without leaning toward either side: *"Which email do I send?"*, not *"Should I send the honest one?"*
-- `option_a` / `option_b` — one **concrete** option each, plus the case for it. Plain text or Markdown, any length; keep the two sides roughly comparable so the comparison is fair.
+- `optionA` / `optionB` — one **concrete** option each, plus the case for it. Plain text or Markdown, any length; keep the two sides roughly comparable so the comparison is fair.
 - **One option = one plan.** Do not bundle alternatives into a single side ("go indoors *or* postpone"): it compares the two slots, it does not split one of them for you.
 
 ```json
 {
   "task": "Which version of the delivery-slip email do I send to a client we want to keep?",
-  "option_a": "Short and direct: the integration took longer than planned, delivery moves to the 24th, everything else is unchanged.",
-  "option_b": "Warmer and longer: thank them for the kickoff, explain that dependencies took more time, offer to walk through the details."
+  "optionA": "Short and direct: the integration took longer than planned, delivery moves to the 24th, everything else is unchanged.",
+  "optionB": "Warmer and longer: thank them for the kickoff, explain that dependencies took more time, offer to walk through the details."
 }
 ```
 
@@ -178,7 +178,7 @@ curl -s -X POST https://mcp.turingcorp.net/mcp \
   -H 'mcp-method: tools/call' \
   -H 'mcp-name: decide' \
   -H "authorization: Bearer $AGENT_PASS" \
-  --data '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"decide","arguments":{"task":"Pick a launch date","option_a":"Ship now","option_b":"Wait two weeks"},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}'
+  --data '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"decide","arguments":{"task":"Pick a launch date","optionA":"Ship now","optionB":"Wait two weeks"},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}'
 ```
 
 ### Versions
