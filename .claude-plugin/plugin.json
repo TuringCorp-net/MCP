@@ -1,0 +1,12 @@
+{
+  "name": "decider",
+  "version": "0.1.0",
+  "description": "Agent skill for TuringCorp Decider: get a reasoned judgement between exactly two defensible options.",
+  "author": {
+    "name": "TuringCorp",
+    "url": "https://mcp.turingcorp.net"
+  },
+  "homepage": "https://mcp.turingcorp.net",
+  "repository": "https://github.com/TuringCorp-net/MCP",
+  "license": "MIT"
+}

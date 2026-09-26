@@ -224,12 +224,23 @@ This endpoint deliberately does **not** serve browser-based (cross-origin) MCP c
 - **Not an autopilot.** Decider is a component you call. How you gate on it — thresholds, human review, retries — is your policy and stays yours.
 - **No idempotency key — record the job id instead.** A retried call is a new call; collect the result with the `job_id` instead.
 
+## Use it from a coding agent: the Agent Skill
+
+There is an **[Agent Skill](skills/decider/SKILL.md)** for coding agents (Claude Code, Codex, and anything that
+reads the same skill convention). It teaches an agent *when* a two-option judgement is the right tool, how to
+write the two options so the comparison is fair, and how to read the confidence without over-reading it.
+
+Install it by pointing your agent at this repository, or copy `skills/decider/` into your skills directory and
+add the MCP server to your client (see [Quickstart](#quickstart)).
+
 ## About this repository
 
 This repository carries the **discovery metadata** for the server above — what directory services and clients read to find and describe it.
 
 - [`server.json`](server.json) — the official MCP Registry manifest
 - [`docs/DIRECTORIES.md`](docs/DIRECTORIES.md) — where this server is listed, and what each directory requires
+- [`docs/COOKBOOK.md`](docs/COOKBOOK.md) — worked patterns for handing `decide` the right kind of call
+- [`skills/decider/`](skills/decider/SKILL.md) — the Agent Skill
 
 This server is also listed on Smithery: **<https://smithery.ai/servers/turingcorp/mcp>**
 

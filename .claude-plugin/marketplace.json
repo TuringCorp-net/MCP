@@ -1,0 +1,15 @@
+{
+  "name": "turingcorp",
+  "description": "Agent skill for TuringCorp Decider: a reasoned judgement between two options.",
+  "owner": {
+    "name": "TuringCorp",
+    "url": "https://mcp.turingcorp.net"
+  },
+  "plugins": [
+    {
+      "name": "decider",
+      "description": "Use the Decider MCP tool: when to reach for a two-option judgement, how to write the options so the comparison is fair, and how to read the confidence",
+      "source": "./"
+    }
+  ]
+}
