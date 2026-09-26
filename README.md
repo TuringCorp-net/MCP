@@ -49,6 +49,9 @@ case where the call never came back (timeout, dropped connection, client gave up
 }
 ```
 
+More patterns — choosing the version you send, thresholding on the confidence, and writing the two options so
+the comparison is fair: **[docs/COOKBOOK.md](docs/COOKBOOK.md)**.
+
 ## Retrieving a result
 
 Every call returns a `job_id`. If the call times out or the connection drops, **do not call again** — retrieve it:
