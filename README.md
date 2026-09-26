@@ -1,6 +1,6 @@
 # TuringCorp — MCP server
 
-A **judge for agent decisions**. Your agent has two defensible options and has to pick one. Send both: a **panel of models** judges them together and returns the better one, **how far apart it judged them** (a calibrated confidence), and why.
+A **decision model** for the calls that don't have a right answer. Your agent has two defensible options and has to pick one. Send both: a **panel of models** judges them together and returns the better one, **how far apart it judged them** (a calibrated confidence), and why.
 
 - **Endpoint (canonical):** `https://mcp.turingcorp.net/mcp`
 - **Aliases:** `https://mcp.turingcorp.net/` and `https://mcp.turingcorp.net/mcp/`
@@ -14,7 +14,7 @@ A **judge for agent decisions**. Your agent has two defensible options and has t
 | | |
 |---|---|
 | **In** | `task` (string), `optionA` (string), `optionB` (string) — all required |
-| **Out** | `job_id` (string), `betterOption` (`"A"` \| `"B"`), `confidence` (percentage string, e.g. `"76.7%"`), `reason` (string) |
+| **Out** | `job_id` (string), `betterOption` (`"option_A"` \| `"option_B"`), `confidence` (percentage string, e.g. `"76.7%"`), `reason` (string) |
 | **Annotations** | `readOnlyHint: true` · `openWorldHint: false` · `idempotentHint: false` |
 | **Timeout** | Reserve **180–300 seconds** — a decision is a long call. The timeout is a **client/host setting, not a tool parameter**: there is nothing to pass in the call. A 60s default cuts it off before the answer arrives; if that happens, do not call again — retrieve by `job_id`. |
 | **Long calls** | A client that declares the `io.modelcontextprotocol/tasks` extension gets a task handle back instead of holding one connection open for minutes, and polls `tasks/get` — see [Retrieving a result](#retrieving-a-result). Clients that do not declare it see no change at all. |

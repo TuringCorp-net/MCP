@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "net.turingcorp.mcp/decider",
   "title": "TuringCorp",
-  "description": "The TuringCorp MCP server. Its decide tool judges which of two defensible options is better.",
-  "version": "1.0.2",
+  "description": "A decision model for the calls that don't have a right answer. The better option, with a reason.",
+  "version": "1.0.3",
   "websiteUrl": "https://mcp.turingcorp.net/",
   "icons": [
     {
