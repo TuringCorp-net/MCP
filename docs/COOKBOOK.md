@@ -79,7 +79,23 @@ your own human review; treat the output as one input to it.
   to answer in seconds. Reserve 180–300 seconds.
 - **High-stakes irreversible calls without review.** See §4.
 
-## 7. Before you trust it: check us on our own output
+## 7. If a call is cut off: who can actually retrieve it
+
+**Do not call again** — a retry is a second paid call. But be realistic about getting the first one back, because
+this is where the documentation of most APIs quietly lies:
+
+- Retrieval needs the **Agent Pass**. Inside an MCP host, **the agent usually does not have it** — the host keeps it
+  and attaches it for you. So an agent that tries the REST retrieval URL on its own gets `401`, correctly.
+- **Agent-side retrieval works only if your host declares the `io.modelcontextprotocol/tasks` extension** (then
+  `decide` returns a task handle and you poll `tasks/get`). **Most clients do not declare it yet.**
+- **Otherwise retrieval is an operator action.** Hand the `job_id` to whoever owns the pass; they run
+  `GET https://api.turingcorp.net/v1/jobs?job_id=<id>`. There is **no** MCP tool for this — the server exposes
+  exactly one tool, on purpose.
+
+**So treat retrieval as the exception handler, not the plan.** The plan is to reserve **180–300 seconds** so the
+call finishes and returns inline. A design that relies on retrieval is a design that will lose decisions.
+
+## 8. Before you trust it: check us on our own output
 
 We have no free tier, so we publish evidence instead. **27 real decisions, recorded verbatim** — the question,
 both options, which was preferred, the confidence reported, and the full reason, across nine domains.

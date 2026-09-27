@@ -54,13 +54,31 @@ the comparison is fair: **[docs/COOKBOOK.md](docs/COOKBOOK.md)**.
 
 ## Retrieving a result
 
-Every call returns a `job_id`. If the call times out or the connection drops, **do not call again** — retrieve it:
+Every call returns a `job_id`. **A call that is allowed to finish returns the decision inline — the `job_id` is only
+for the case where it never came back.**
 
-- **With the id** — `GET https://api.turingcorp.net/v1/jobs?job_id=<id>` with the same Agent Pass. A client that speaks the `io.modelcontextprotocol/tasks` extension can use `tasks/get` with `{"taskId":"<id>"}` on the MCP endpoint instead.
-- **Without it** — `GET https://api.turingcorp.net/v1/jobs` lists the job ids that credential created in the last 7 days; then fetch one as above. The list carries only the job id, the product and a timestamp — fetch a job by id to see what it was.
-- **Nothing yet** — an empty list is **not** an error, and there is **no** `job_id=0` placeholder: `{"object":"list","window_seconds":604800,"data":[]}`. Asking for `0` returns `404 No such job.`
+⚠️ **Who can actually retrieve.** Retrieval needs the Agent Pass, and **inside an MCP host the agent usually does not
+have it** — the host stores it and attaches it for you. So:
 
-Retrieval returns the job's status and, once it succeeded, the same body the call itself would have returned. A job that is not yours, or older than **7 days**, is reported as unavailable. `GET https://api.turingcorp.net/v1/account` returns `{"account_id":"…"}`.
+- **Agent-side, only if your host declares the `io.modelcontextprotocol/tasks` extension:** `decide` returns a task
+  handle and the client polls `tasks/get` with `{"taskId":"<id>"}` on the MCP endpoint. **Most clients do not
+  declare it yet** — check before relying on it.
+- **Otherwise this is an operator action, not an agent action.** There is **no** MCP tool for retrieval — the server
+  exposes exactly one tool, `decide`, by design.
+
+**Operator/host, with the pass:**
+
+- **With the id** — `GET https://api.turingcorp.net/v1/jobs?job_id=<id>` using the same Agent Pass.
+- **Without it** — `GET https://api.turingcorp.net/v1/jobs` lists the job ids that credential created in the last 7
+  days; then fetch one as above. The list carries only the job id, the product and a timestamp.
+- **Nothing yet** — an empty list is **not** an error, and there is **no** `job_id=0` placeholder:
+  `{"object":"list","window_seconds":604800,"data":[]}`. Asking for `0` returns `404 No such job.`
+
+Retrieval returns the job's status and, once it succeeded, the same body the call itself would have returned. A job
+that is not yours, or older than **7 days**, is reported as unavailable. `GET https://api.turingcorp.net/v1/account`
+returns `{"account_id":"…"}`.
+
+**The practical answer is not to need retrieval: reserve 180–300 seconds** so the call is allowed to finish.
 
 ## See it decide first
 
