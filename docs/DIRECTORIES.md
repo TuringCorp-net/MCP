@@ -40,7 +40,8 @@ before anyone has a credential. Execution is not open.
 
 ## Notes for directory maintainers
 
-- One tool only: `decide`. It is described in full in the [README](../README.md).
+- The full tool list is in the [README](../README.md). `tools/list` is what is actually served — read it
+  rather than trusting a tool count written in any document (documents go stale, the endpoint does not).
 - The server card and this manifest are generated from the live server, so they cannot drift
   from what the endpoint actually serves.
 - If a scan fails against your infrastructure, the failure is almost always bot protection on
