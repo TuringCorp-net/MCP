@@ -30,7 +30,7 @@ reachable *before* asking anyone for a token.
 
 The credential goes in an `Authorization` header, **including the word `Bearer` and a space**.
 
-**Any client that reads a JSON config** (Cursor, Cline, Windsurf, Claude Desktop) — note the key is `mcpServers`:
+**Any client that reads a JSON config** (Cursor, Windsurf, Claude Desktop) — note the key is `mcpServers`:
 
 ```json
 {
@@ -43,6 +43,28 @@ The credential goes in an `Authorization` header, **including the word `Bearer` 
   }
 }
 ```
+
+**Cline — read this, the `type` differs.** Cline wants **`"streamableHttp"`** (camelCase, no hyphen) and stores its
+settings in `cline_mcp_settings.json`. Any other `type`, or omitting it, makes Cline fall back to **SSE** — and this
+server does not speak SSE, so the connection fails with **`405`**:
+
+```json
+{
+  "mcpServers": {
+    "TuringCorp": {
+      "type": "streamableHttp",
+      "url": "https://mcp.turingcorp.net/mcp",
+      "headers": { "Authorization": "Bearer <your Agent Pass>" },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
+```
+
+To open that file in the Cline panel: **MCP Servers** icon (stacked-server icon in the top toolbar) → **Configure**
+tab → **Configure MCP Servers**. (The **Remote Servers** tab can add a URL-only server, but it has no field for a
+custom `Authorization` header, so use the JSON for this server.)
 
 **VS Code** uses the key **`servers`** (not `mcpServers`) in `.vscode/mcp.json`:
 

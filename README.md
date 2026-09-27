@@ -114,7 +114,7 @@ Self-service at **<https://agent-pass.turingcorp.net>**: sign up with an email a
 
 ### 2. Point your client at the endpoint
 
-**Any client that reads a JSON config — Cursor, Cline, Windsurf, Claude Desktop:**
+**Any client that reads a JSON config — Cursor, Windsurf, Claude Desktop:**
 
 ```json
 {
@@ -130,6 +130,24 @@ Self-service at **<https://agent-pass.turingcorp.net>**: sign up with an email a
 
 Keep the `"type": "http"` line: a client that reads a `url` entry with no `type` treats it as a local stdio
 server and skips it.
+
+**Cline needs a different `type` — `"streamableHttp"` (camelCase, no hyphen).** Anything else, or omitting it,
+makes Cline fall back to **SSE**, which this server does not speak, and the connection fails with **`405`**. The
+settings file is `cline_mcp_settings.json` (**MCP Servers** icon → **Configure** tab → **Configure MCP Servers**):
+
+```json
+{
+  "mcpServers": {
+    "TuringCorp": {
+      "type": "streamableHttp",
+      "url": "https://mcp.turingcorp.net/mcp",
+      "headers": { "Authorization": "Bearer <your Agent Pass>" },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
+```
 
 **A client that only speaks stdio** needs a bridge, and the credential must go in through `--header` —
 `mcp-remote` does not read an `AUTHORIZATION` environment variable, so a config that only sets one connects,
