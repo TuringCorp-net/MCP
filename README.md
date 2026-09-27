@@ -9,7 +9,7 @@ A **decision model** for the calls that don't have a right answer. Your agent ha
 - **Protocol:** MCP `2026-07-28` (modern) **and** `2025-06-18` (legacy) — one route serves both.
 - **Discovery methods** (`server/discover`, `tools/list`) need **no credentials** — directory scanners can read the full tool list unauthenticated, by design.
 
-## The one tool: `decide`
+## Making a decision: `decide`
 
 | | |
 |---|---|
@@ -57,16 +57,21 @@ the comparison is fair: **[docs/COOKBOOK.md](docs/COOKBOOK.md)**.
 Every call returns a `job_id`. **A call that is allowed to finish returns the decision inline — the `job_id` is only
 for the case where it never came back.**
 
-⚠️ **Who can actually retrieve.** Retrieval needs the Agent Pass, and **inside an MCP host the agent usually does not
-have it** — the host stores it and attaches it for you. So:
+⚠️ **How to retrieve — use `get_result`.** Retrieval needs the Agent Pass, and **inside an MCP host the agent
+usually does not have it** — so retrieval is a **tool call**, not a REST call: `get_result` is authenticated by the
+host, which attaches the pass for you. **An agent never handles the pass**, and the credential is deliberately not a
+tool argument (it would end up in prompts and transcripts).
 
-- **Agent-side, only if your host declares the `io.modelcontextprotocol/tasks` extension:** `decide` returns a task
-  handle and the client polls `tasks/get` with `{"taskId":"<id>"}` on the MCP endpoint. **Most clients do not
-  declare it yet** — check before relying on it.
-- **Otherwise this is an operator action, not an agent action.** There is **no** MCP tool for retrieval — the server
-  exposes exactly one tool, `decide`, by design.
+- **`get_result` with a `job_id`** — that job's status, and once it succeeded, the same decision body the original
+  call returned.
+- **`get_result` with no argument** — the job ids this credential created in the last 7 days. This is the case that
+  matters most: when a call is cut off, you never received an id.
+- **Read-only and free** — it starts no new work and costs nothing, so it is safe to retry
+  (`readOnlyHint: true`, `idempotentHint: true`).
+- A host that declares the `io.modelcontextprotocol/tasks` extension can poll `tasks/get` instead. **Most clients do
+  not declare it yet**, which is why `get_result` exists.
 
-**Operator/host, with the pass:**
+**Operator/host, with the pass (the same data over REST):**
 
 - **With the id** — `GET https://api.turingcorp.net/v1/jobs?job_id=<id>` using the same Agent Pass.
 - **Without it** — `GET https://api.turingcorp.net/v1/jobs` lists the job ids that credential created in the last 7
@@ -261,10 +266,10 @@ This endpoint deliberately does **not** serve browser-based (cross-origin) MCP c
 
 ## What this is not
 
-- **One tool only.** `decide` is the entire surface. There is no way to reach other tiers through this endpoint.
+- **No other tiers.** Other TuringCorp capabilities are not reachable through this endpoint.
 - **No SLA.** No availability commitment is offered, and none should be inferred.
 - **Not an autopilot.** Decider is a component you call. How you gate on it — thresholds, human review, retries — is your policy and stays yours.
-- **No idempotency key — record the job id instead.** A retried call is a new call; collect the result with the `job_id` instead.
+- **`decide` has no idempotency key — record the job id instead.** A retried decision is a new paid call; collect the original with `get_result`.
 
 ## Use it from a coding agent: the Agent Skill
 

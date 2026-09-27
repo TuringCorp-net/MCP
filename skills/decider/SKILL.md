@@ -73,11 +73,12 @@ All three arguments are required strings.
 
 - Reserve **180–300 seconds**. The timeout is a **client/host setting, not a tool parameter** — there is nothing to pass in the call. A 60-second default will cut it off before the answer arrives.
 - On a normal call everything returns inline. **`job_id` exists for the case where the call never came back.**
-- **If it times out, do not call again — retrieve it.** A retry is a second paid call (`idempotentHint: false`):
-  - `GET https://api.turingcorp.net/v1/jobs?job_id=<id>` with the same pass;
-  - without the id, `GET https://api.turingcorp.net/v1/jobs` lists the ids that pass created in the last 7 days;
-  - an empty list is not an error: `{"object":"list","window_seconds":604800,"data":[]}`.
-- A client that declares the `io.modelcontextprotocol/tasks` extension gets a task handle and polls `tasks/get` instead of holding a connection open.
+- **If it is cut off, do not call `decide` again — retrieve it with the `get_result` tool.** A retry is a second paid call (`idempotentHint: false`):
+  - `get_result` **with the `job_id`** → that job's status, and once it succeeded the same decision body the call would have returned;
+  - `get_result` **with no argument** → the ids this credential created in the last 7 days — **the case that matters when you never received an id**;
+  - it is **read-only and free** (`readOnlyHint: true`, `idempotentHint: true`), so calling it repeatedly is safe;
+  - **never pass a credential as an argument.** The host attaches the Agent Pass for you, exactly as it does for `decide` — do not try to reach the REST API yourself for retrieval, because you do not hold the pass.
+- A client that declares the `io.modelcontextprotocol/tasks` extension gets a task handle and polls `tasks/get` instead of holding a connection open. Most clients do not declare it yet — which is why `get_result` exists.
 
 ## Before you trust it: check it on a known answer
 

@@ -79,18 +79,24 @@ your own human review; treat the output as one input to it.
   to answer in seconds. Reserve 180–300 seconds.
 - **High-stakes irreversible calls without review.** See §4.
 
-## 7. If a call is cut off: who can actually retrieve it
+## 7. If a call is cut off: retrieve it with `get_result`
 
-**Do not call again** — a retry is a second paid call. But be realistic about getting the first one back, because
-this is where the documentation of most APIs quietly lies:
+**Do not call `decide` again** — a retry is a second paid call.
 
-- Retrieval needs the **Agent Pass**. Inside an MCP host, **the agent usually does not have it** — the host keeps it
-  and attaches it for you. So an agent that tries the REST retrieval URL on its own gets `401`, correctly.
-- **Agent-side retrieval works only if your host declares the `io.modelcontextprotocol/tasks` extension** (then
-  `decide` returns a task handle and you poll `tasks/get`). **Most clients do not declare it yet.**
-- **Otherwise retrieval is an operator action.** Hand the `job_id` to whoever owns the pass; they run
-  `GET https://api.turingcorp.net/v1/jobs?job_id=<id>`. There is **no** MCP tool for this — the server exposes
-  exactly one tool, on purpose.
+**Retrieve it with the `get_result` tool.** This matters more than it sounds: retrieval needs the Agent Pass, and
+inside a host the **agent does not have it**. So retrieval is deliberately a *tool call*, not a REST call — the host
+attaches the credential, and **no credential is ever a tool argument**, because that would put it into prompts and
+transcripts.
+
+- **With a `job_id`** → that job's status, and once it succeeded the same decision body the original call returned.
+- **With no argument** → the job ids this credential created in the last 7 days. **This is the case that matters:
+  when a call is cut off you never received an id.**
+- **Read-only and free** (`readOnlyHint: true`, `idempotentHint: true`) — no new work, no charge, safe to repeat.
+- A host that declares the `io.modelcontextprotocol/tasks` extension can poll `tasks/get` instead. **Most clients do
+  not declare it yet** — which is exactly why `get_result` exists rather than us telling agents to go and find a
+  credential.
+
+The operator can fetch the same data over REST (`GET https://api.turingcorp.net/v1/jobs?job_id=<id>`).
 
 **So treat retrieval as the exception handler, not the plan.** The plan is to reserve **180–300 seconds** so the
 call finishes and returns inline. A design that relies on retrieval is a design that will lose decisions.
