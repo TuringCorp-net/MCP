@@ -56,15 +56,23 @@ server does not speak SSE, so the connection fails with **`405`**:
       "url": "https://mcp.turingcorp.net/mcp",
       "headers": { "Authorization": "Bearer <your Agent Pass>" },
       "disabled": false,
-      "autoApprove": []
+      "autoApprove": [],
+      "timeout": 300
     }
   }
 }
 ```
 
+`timeout` is in **seconds** and defaults to 300 — leave it at 300 or higher. Note that Cline has had a bug
+([cline#2296](https://github.com/cline/cline/issues/2296), reported on 3.7.0, closed 2025-06-23) where a request
+died after roughly a minute regardless of this setting. If a `decide` call is cut off at ~60 s, suspect that class
+of bug rather than the server — and **do not retry**: a retry is a second paid call. Retrieve it with the `job_id`
+instead.
+
 To open that file in the Cline panel: **MCP Servers** icon (stacked-server icon in the top toolbar) → **Configure**
-tab → **Configure MCP Servers**. (The **Remote Servers** tab can add a URL-only server, but it has no field for a
-custom `Authorization` header, so use the JSON for this server.)
+tab → **Configure MCP Servers**. (The **Remote Servers** tab can add a URL-only server — it picks
+`"streamableHttp"` for you — but it has **no field for a custom `Authorization` header**, so this server still
+needs the JSON edited by hand to carry the Agent Pass.)
 
 **VS Code** uses the key **`servers`** (not `mcpServers`) in `.vscode/mcp.json`:
 

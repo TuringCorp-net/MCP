@@ -143,11 +143,17 @@ settings file is `cline_mcp_settings.json` (**MCP Servers** icon → **Configure
       "url": "https://mcp.turingcorp.net/mcp",
       "headers": { "Authorization": "Bearer <your Agent Pass>" },
       "disabled": false,
-      "autoApprove": []
+      "autoApprove": [],
+      "timeout": 300
     }
   }
 }
 ```
+
+`timeout` is in **seconds** — leave it at 300 or higher. Cline has had a bug
+([#2296](https://github.com/cline/cline/issues/2296), closed 2025-06-23) where requests died after about a minute
+regardless of that setting; if a call is cut off at ~60 s, suspect that rather than the server, and **retrieve by
+`job_id` instead of retrying** (a retry is a second paid call).
 
 **A client that only speaks stdio** needs a bridge, and the credential must go in through `--header` —
 `mcp-remote` does not read an `AUTHORIZATION` environment variable, so a config that only sets one connects,
