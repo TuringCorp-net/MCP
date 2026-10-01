@@ -3,8 +3,8 @@ name: decider
 license: MIT
 description: >
   Get a reasoned judgement between exactly two defensible options, when no
-  objective rule decides. TuringCorp Decider is a remote MCP server exposing one
-  tool, decide: you send a neutral task and the two options, and it returns the
+  objective rule decides. TuringCorp Decider is a remote MCP server whose decide
+  tool takes a neutral task and the two options, and returns the
   better one, a calibrated confidence, and the reason. Use when a task requires
   choosing between two concrete alternatives that are both arguable — two drafts,
   two plans, two diagnoses, two replies, two vendors — and the choice has to be
@@ -14,10 +14,10 @@ description: >
 
 # Decider — a reasoned judgement between two options
 
-One remote MCP tool. Two options in; the better one, a calibrated confidence, and the reason back.
+Two options in; the better one, a calibrated confidence, and the reason back.
 
 - **Endpoint:** `https://mcp.turingcorp.net/mcp` (Streamable HTTP, stateless)
-- **Tool:** `decide`
+- **Tools:** `decide` — get a decision · `get_result` — fetch an earlier one
 - **Auth:** an Agent Pass — `Authorization: Bearer <pass>` from <https://agent-pass.turingcorp.net>. Discovery (`tools/list`) needs no credential.
 - **Cost:** `$0.50 per decision` (launch offer `$0.25` for the first month).
 
