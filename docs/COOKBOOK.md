@@ -119,3 +119,35 @@ any table we could publish, and it costs one call.
 The published benchmarks (what they are, sample sizes, what was excluded) are at
 <https://api.turingcorp.net>. We name the benchmark, we say they were run by us on the benchmark's own protocol,
 and we disclose the failures — so treat them as our evidence, not as an independent verdict.
+
+## 9. Put the call in your test suite: assert on the contract, not the answer
+
+The reason to move a judgement out of a prompt is that the result becomes something you can assert on. The
+**shape** of the answer is the contract — a preferred option, how far apart the two were judged, and a reason.
+Assert on that, and the same scenario can live in your test suite like any other:
+
+```python
+# tests/test_escalation.py
+def test_close_call_escalates_to_human(decide):
+    r = decide(
+        task="Which support reply do we send this customer?",
+        optionA="Refund immediately, no questions.",
+        optionB="Explain the policy and offer a partial credit.",
+    )
+    # The pick is not the contract. The shape of the answer is.
+    assert r["betterOption"] in ("option_A", "option_B")
+    assert r["reason"], "a pick with no reason is not reviewable"
+
+    if float(r["confidence"].rstrip("%")) < 70:
+        escalate_to_human(r["reason"])   # your policy, not ours
+```
+
+- **Do not assert on which option won.** That re-records one answer, and you would be editing the test every
+  model change. Assert that a pick came back, that it carried a reason, and that *your* threshold did its job.
+- **The threshold is yours, not ours.** `confidence` reports how far apart the two options were judged; it does
+  not tell you what to do about it. That last line is a policy you own and can change without us.
+- **The reason is a first-class output**, because it is what you hand a human when the call was close.
+
+The write-up behind this pattern — including the three client-config traps (`"type"`, discovery vs. calling, and
+the timeout you have to raise yourself) — is at
+<https://dev.to/turingcorp/your-agents-hardest-call-is-the-one-you-cant-test-4cl5>.
