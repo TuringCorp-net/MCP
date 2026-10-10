@@ -151,3 +151,46 @@ def test_close_call_escalates_to_human(decide):
 The write-up behind this pattern — including the three client-config traps (`"type"`, discovery vs. calling, and
 the timeout you have to raise yourself) — is at
 <https://dev.to/turingcorp/your-agents-hardest-call-is-the-one-you-cant-test-4cl5>.
+
+## 10. "Connected" is not "credentialed" — test the three states separately
+
+A client panel showing **connected** only means the discovery half answered. Listing is deliberately open, so it
+answers whatever you put in the `Authorization` header — including a garbage one. The credential is only exercised
+on a call. Probe the three states on the **calling** path:
+
+```bash
+# 1) no credential, tools/list -> must be 200. Connectivity, nothing more.
+curl -s -o /dev/null -w 'open    %{http_code}\n' -X POST "$MCP_URL" \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+# 2) a deliberately wrong credential, on a CALL -> must be 401.
+#    Do not use tools/list here: it answers 200 whatever the header says.
+curl -s -o /dev/null -w 'wrong   %{http_code}\n' -X POST "$MCP_URL" \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -H 'authorization: Bearer definitely-not-a-real-pass' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"decide","arguments":{}}}'
+
+# 3) the real credential, same call -> the only line that proves the setup works end to end.
+curl -s -o /dev/null -w 'real    %{http_code}\n' -X POST "$MCP_URL" \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -H "authorization: Bearer $AGENT_PASS" \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"decide","arguments":{}}}'
+```
+
+Measured against this server (2026-10-10): state 1 → `200`, state 2 → `401` with a JSON-RPC credential error,
+state 3 → the decision. If state 2 returns `200`, the calling path is not protected — that is a finding about the
+server, not about your config.
+
+| Symptom | Most likely cause | First thing to check |
+|---|---|---|
+| Panel says connected, first call 401 | credential not attached by the client config | the `headers` block, **including the `Bearer ` prefix** |
+| `405` right after adding the server | transport dialect mismatch (SSE fallback) | the `type` field for that specific client |
+| Server entry missing from the client UI | wrong config key (`servers` vs `mcpServers`) | the JSON key, not the URL |
+| Call dies at ~60 s, no error body | client tool-call timeout, not a server fault | timeout unit and value; raise it to 180–300 s |
+| Works with `curl`, fails in the host | header bridge (`mcp-remote` and friends) ignores env vars | move the header into `--header` |
+| 401 on *retrieval* of an earlier call | retrieval attempted over REST without a host-attached credential | use the retrieval tool call instead |
+
+The per-client config matrix behind that table is `llms-install.md` in this repository; the prose version of this
+section is at
+<https://dev.to/turingcorp/your-remote-mcp-server-is-connected-and-still-returns-401-333g>.
