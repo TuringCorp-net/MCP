@@ -194,3 +194,58 @@ server, not about your config.
 The per-client config matrix behind that table is `llms-install.md` in this repository; the prose version of this
 section is at
 <https://dev.to/turingcorp/your-remote-mcp-server-is-connected-and-still-returns-401-333g>.
+
+## 11. Client config matrix — the same transport, four different names
+
+Every host names the streamable-HTTP transport differently, and a wrong name fails in three different ways.
+Two of them do not look like configuration errors: a bare `url` with no `type` can be read as a **local stdio**
+server (you get a spawn error for an endpoint that is never dialed), and a wrong/absent `type` in Cline makes it
+fall back to **SSE**, which this server does not speak, so the connection dies with a **`405`** that reads like a
+server fault.
+
+| Client | Config location | Parent key | Transport field | Value |
+|---|---|---|---|---|
+| Claude Code | CLI | — | `--transport` | `http` |
+| Cursor / Windsurf / Claude Desktop | JSON settings | `mcpServers` | `type` | `http` |
+| Cline | `cline_mcp_settings.json` | `mcpServers` | `type` | `streamableHttp` |
+| VS Code | `.vscode/mcp.json` | `servers` | `type` | `http` |
+| Codex | `~/.codex/config.toml` | `[mcp_servers.<name>]` | `url` + `http_headers` | table keys |
+| stdio-only hosts | JSON settings | `mcpServers` | `command` + `args` | `npx mcp-remote` |
+
+The one that catches people: **Cline wants `"streamableHttp"`** (camelCase, no hyphen). Anything else, or omitting
+`type`, is an SSE fallback.
+
+```json
+{
+  "mcpServers": {
+    "TuringCorp": {
+      "type": "http",
+      "url": "https://mcp.turingcorp.net/mcp",
+      "headers": { "Authorization": "Bearer <your Agent Pass>" }
+    }
+  }
+}
+```
+
+For a stdio-only host, bridge with `mcp-remote` and pass the credential through `--header` — the bridge does
+**not** read an `AUTHORIZATION` environment variable, so an env-only config connects, lists tools, then fails on
+the first call with `401`. The missing space after `Authorization:` is deliberate: some hosts mangle spaces
+inside `args`.
+
+```json
+{
+  "mcpServers": {
+    "TuringCorp": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.turingcorp.net/mcp",
+               "--header", "Authorization:${AGENT_PASS}"],
+      "env": { "AGENT_PASS": "Bearer <your Agent Pass>" }
+    }
+  }
+}
+```
+
+Per-client starting points, including the `.vscode/mcp.json` and Codex TOML shapes, are in `llms-install.md` in
+this repository. The write-up behind this section — including a diagnostic you can run before opening a client
+at all — is at
+<https://dev.to/turingcorp/the-remote-mcp-client-config-matrix-nobody-documents-and-the-three-ways-type-fails-silently-1chg>.
