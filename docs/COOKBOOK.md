@@ -249,3 +249,47 @@ Per-client starting points, including the `.vscode/mcp.json` and Codex TOML shap
 this repository. The write-up behind this section — including a diagnostic you can run before opening a client
 at all — is at
 <https://dev.to/turingcorp/the-remote-mcp-client-config-matrix-nobody-documents-and-the-three-ways-type-fails-silently-1chg>.
+
+## 12. When a call is cut off: four failures, one recovery path
+
+A cut-off call is not one event. It arrives as four different signatures, and only one of them means "nothing
+happened". The signature decides whether retrying is safe, and for a paid non-idempotent call the answer is
+almost always **retrieve, don't retry**.
+
+| What the caller sees | Did the job run? | Retry safe? | Move |
+|---|---|---|---|
+| Client aborts the call at its own limit | Usually yes | No, until you look | Retrieve by id, or list the ids your credential created |
+| Error result (`isError: true`) | Rejected before or during work | Depends on the block | Branch on the HTTP status in the error block |
+| Framework backgrounds the call, hands back a task id | Yes | No | Wait for the task notification, or retrieve by id |
+| Idle abort (no bytes for the idle window) | Usually yes | No | Retrieve by id |
+
+**The number you are fighting is usually not the wall-clock timeout.** On an HTTP connection the per-request timer
+stops at the first response byte, so a tool that thinks for minutes and then answers is racing the **idle** window
+(Claude Code: five minutes for HTTP/SSE, configurable, `0` disables). A per-server `timeout` of at least 1000 ms
+also acts as a floor on that idle window — so the effective setting for a long call is not the largest number you
+can find, it is the per-server timeout plus the knowledge that `decide` sends nothing until it answers.
+
+**Retrieval is a tool call, not a REST call, from inside a host.** The host holds the Agent Pass and attaches it;
+an agent that reaches for the REST API itself gets `401` on a job it is allowed to read. `get_result` is read-only
+and free — safe to repeat — and with no argument it lists the ids your credential created in the last 7 days,
+which is the case that matters, because a client-side abort never gave you an id.
+
+**Test the retrieval path before you need it.** Call `get_result` with no argument while nothing is broken: a
+`401` means retrieval is not reachable from where the agent runs and your recovery plan is a diagram, not a
+capability; an empty list is the healthy state before the first cut-off.
+
+Two contract rules worth copying if you build the server side: answer **"not yours" and "does not exist"
+identically**, or the endpoint becomes an oracle for probing other tenants' ids; and return an **empty list as a
+normal result** with no "id 0" sentinel, because every client eventually probes it — `job_id=0` is answered as an
+unavailable job, not as a placeholder.
+
+Per-client timeout controls, where the client documents them:
+
+| Client | Per tool call | Idle window |
+|---|---|---|
+| Claude Code | per-server `timeout` (ms) in `.mcp.json`, or `MCP_TOOL_TIMEOUT`; unset ≈ 28 h | 5 min for HTTP/SSE, `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT` |
+| Cline | `timeout` in `cline_mcp_settings.json`, **seconds** | — |
+| Cursor / Windsurf / VS Code | not documented in their MCP pages — treat the default as unknown | — |
+
+The full write-up, including the negative test as a table and the five design rules for a retrievable long call,
+is at <https://dev.to/turingcorp/a-tool-call-that-gets-cut-off-is-four-different-failures-and-only-one-of-them-is-a-timeout-3ojg>.
