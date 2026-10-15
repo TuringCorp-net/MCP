@@ -292,4 +292,56 @@ Per-client timeout controls, where the client documents them:
 | Cursor / Windsurf / VS Code | not documented in their MCP pages — treat the default as unknown | — |
 
 The full write-up, including the negative test as a table and the five design rules for a retrievable long call,
-is at <https://dev.to/turingcorp/a-tool-call-that-gets-cut-off-is-four-different-failures-and-only-one-of-them-is-a-timeout-3ojg>.
+is at <https://dev.to/turingcorp/a-tool-call-that-gets-cut-off-is-four-different-failures-and-only-one-of-them-is-a-timeout-2532>.
+
+## 13. A reported confidence is not a measurement
+
+A model will happily append `"confidence": 0.92` to its answer, and the obvious next line is a branch on it.
+That number was generated in the same forward pass as the answer, so it tracks how decisive the answer *sounds*,
+not how close the evidence was. It is a word that looks like a number.
+
+A **measured** number is produced by bookkeeping: store the number now, store what actually happened later, and put
+the two in the same table. That join is the only place calibration can come from, and it is why "ask the model to
+report a better-calibrated number" cannot work — re-wording moves the numbers, not the missing column.
+
+| | Decorative number | Measured number |
+|---|---|---|
+| Where it comes from | a sampled token in the same generation as the answer | a record: number stored now, outcome stored later, buckets compared |
+| What it responds to | how decisive the answer sounds | how close the evidence actually was |
+| Behaviour on a harder input | nearly unchanged | falls, often below 0.7 |
+| What you can compute from it | nothing — no join is possible | per-band hit rate, and whether the bands are honest |
+| Failure mode when you branch on it | a coin flip with a confident label, invisible in production | you own the errors, but you can see them and fix the bands |
+| Cheapest way to tell them apart | ask the same question twice with different framing; watch the number track the framing | ask whether your logs contain the outcome column at all |
+
+Our own record is published: on 27 verbatim decisions where both options were defensible, the reported separation
+runs **27.3%–88.3%, median 74.0%, none above 90%** — a checked number on a genuinely close call is *allowed* to be
+low, so it is.
+
+The fix is not a better prompt; it is making the judgement a call with a contract, under an id you can retrieve:
+
+```bash
+curl -s -X POST "https://mcp.turingcorp.net/mcp" \
+  -H 'content-type: application/json' \
+  -H 'accept: application/json, text/event-stream' \
+  -H "authorization: Bearer $AGENT_PASS" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"decide","arguments":{
+        "task":"Which draft of the outage notice do we send to customers?",
+        "optionA":"Short: what broke, what we did, when it was fixed.",
+        "optionB":"Longer: the same content plus what we changed so it cannot recur."
+      }}}'
+```
+
+The result carries a `job_id` next to the pick and the reason — treat it as the first column of your bookkeeping,
+not as error handling. Then two moves, both boring and both mandatory: **log every judgement as a row** (id, number,
+inputs, timestamp, action taken), and **join the rows to outcomes later**, bucketed by band.
+
+Checklist to paste into the review that gates the prompt change:
+
+1. Do not branch on a number whose per-band accuracy you have never computed.
+2. Log every judgement: id, number, inputs, timestamp, and the action taken.
+3. Define the bands **before** looking at outcomes, or you will fit the bands to the data and call it calibration.
+4. Join the log to outcomes; compute the hit rate per band; keep the table where the team can see it.
+5. When the numbers and the outcomes disagree, change the band-to-action mapping — not the prompt wording.
+
+The full write-up is at
+<https://dev.to/turingcorp/a-confidence-number-your-model-reports-is-not-a-measurement-3g94>.
