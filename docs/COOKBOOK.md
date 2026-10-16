@@ -345,3 +345,37 @@ Checklist to paste into the review that gates the prompt change:
 
 The full write-up is at
 <https://dev.to/turingcorp/a-confidence-number-your-model-reports-is-not-a-measurement-3g94>.
+
+## 14. A tool description is a protocol, not documentation
+
+When a model decides whether to call a tool, the only things in its context are the name, the description, the
+parameter descriptions and the schemas. The README, the docs site and the comment block never travel with the call.
+So the description is not documentation about the tool — it is the tool's interface to the model.
+
+The expensive failures are the quiet ones: the tool that is never called because nothing said *when* to call it, the
+call made on input the tool cannot serve because nothing said what it is **not** for, the retry after a timeout
+because the description never mentioned that a retry is a new call.
+
+**Seven questions to answer in the description, per tool.** Every "no" is a decision you have not made yet:
+
+| # | Question | Where it lives |
+|---|---|---|
+| 1 | When should the model call this, named as a task rather than a feature? | first sentence of the description |
+| 2 | When should it **not** — including the nearest lookalike task you do not serve? | description |
+| 3 | Can every parameter be filled correctly without reading another document? | parameter descriptions |
+| 4 | What comes back, which fields are always present, which are conditional? | output schema |
+| 5 | How long may the call take, and does calling again cost something? | description |
+| 6 | After a cut-off, what is the path that is **not** "call it again"? | description, naming the other tool |
+| 7 | Are the declared annotations true (`readOnlyHint`, `idempotentHint`, `openWorldHint`)? | annotations |
+
+Read the contract the model actually sees over the same credential-free discovery call its host makes:
+
+```bash
+curl -s -X POST https://mcp.turingcorp.net/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+Our own description is published the same way, unauthenticated: `tools/list` and `/llms.txt`. The full write-up is at
+<https://dev.to/turingcorp/your-tool-description-is-a-protocol-not-documentation-25f2>.
